@@ -1,5 +1,6 @@
 from .BaseClient import BaseClient
 from .Utils import bytes_to_int, format_temperature
+from .Models import DeviceModel
 
 # Client for Renogy LFP battery with built-in bluetooth / BT-2 module
 
@@ -9,8 +10,8 @@ FUNCTION = {
 }
 
 class BatteryClient(BaseClient):
-    def __init__(self, config, on_data_callback=None, on_error_callback=None):
-        super().__init__(config)
+    def __init__(self, config, device_model: DeviceModel, on_data_callback=None, on_error_callback=None):
+        super().__init__(config, device_model)
         self.on_data_callback = on_data_callback
         self.on_error_callback = on_error_callback
         self.data = {}

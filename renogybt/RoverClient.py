@@ -1,6 +1,7 @@
 import logging
 from .BaseClient import BaseClient
 from .Utils import bytes_to_int, parse_temperature
+from .Models import DeviceModel
 
 # Read and parse BT-1 RS232 type bluetooth module connected to Renogy Rover/Wanderer/Adventurer
 # series charge controllers. Also works with BT-2 RS485 module on Rover Elite, DC Charger etc.
@@ -35,8 +36,8 @@ BATTERY_TYPE = {
 }
 
 class RoverClient(BaseClient):
-    def __init__(self, config, on_data_callback=None, on_error_callback=None):
-        super().__init__(config)
+    def __init__(self, config, device_model:DeviceModel, on_data_callback=None, on_error_callback=None):
+        super().__init__(config, device_model)
         self.on_data_callback = on_data_callback
         self.on_error_callback = on_error_callback
         self.data = {}

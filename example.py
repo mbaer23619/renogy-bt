@@ -3,6 +3,7 @@ import configparser
 import os
 import sys
 from renogybt import InverterClient, RoverClient, RoverHistoryClient, BatteryClient, DataLogger, Utils
+from renogybt.Models import DeviceModel
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -11,6 +12,23 @@ config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), config_f
 config = configparser.ConfigParser(inline_comment_prefixes=('#'))
 config.read(config_path)
 data_logger: DataLogger = DataLogger(config)
+
+# Create battery and charge controller device models
+battery_device = DeviceModel(
+    adapter=config['battery']['adapter'],
+    mac_addr=config['battery']['mac_addr'],
+    alias=config['battery']['alias'],
+    type=config['battery']['type'],
+    device_id=int(config['battery']['device_id'])
+)
+
+charge_controller_device = DeviceModel(
+    adapter=config['charge_controller']['adapter'],
+    mac_addr=config['charge_controller']['mac_addr'],
+    alias=config['charge_controller']['alias'],
+    type=config['charge_controller']['type'],
+    device_id=int(config['charge_controller']['device_id'])
+)
 
 # the callback func when you receive data
 def on_data_received(client, data):
@@ -29,14 +47,25 @@ def on_data_received(client, data):
 def on_error(client, error):
     logging.error(f"on_error: {error}")
 
+# Start Battery Client
+#battery_client = BatteryClient(config, battery_device, on_data_received, on_error)
+#battery_client.connect()
+
+# Start Charge Controller Client
+rover_client = RoverClient(config, charge_controller_device, on_data_received, on_error)
+rover_client.connect()
+
+'''
 # start client
 if config['device']['type'] == 'RNG_CTRL':
     RoverClient(config, on_data_received, on_error).connect()
 elif config['device']['type'] == 'RNG_CTRL_HIST':
     RoverHistoryClient(config, on_data_received, on_error).connect()
 elif config['device']['type'] == 'RNG_BATT':
-    BatteryClient(config, on_data_received, on_error).connect()
+    battery_client = BatteryClient(config, on_data_received, on_error)
+    battery_client.connect()
 elif config['device']['type'] == 'RNG_INVT':
     InverterClient(config, on_data_received, on_error).connect()
 else:
     logging.error("unknown device type")
+'''

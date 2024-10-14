@@ -5,6 +5,7 @@ import configparser
 import time
 from .Utils import bytes_to_int, int_to_bytes, crc16_modbus
 from .BLE import DeviceManager, Device
+from .Models import DeviceModel
 
 # Base class that works with all Renogy family devices
 # Should be extended by each client with its own parsers and section definitions
@@ -16,30 +17,32 @@ WRITE_CHAR_UUID  = "0000ffd1-0000-1000-8000-00805f9b34fb"
 READ_TIMEOUT = 30 # (seconds)
 
 class BaseClient:
-    def __init__(self, config):
+    def __init__(self, config, device_model: DeviceModel):
         self.config: configparser.ConfigParser = config
         self.manager = None
         self.device = None
         self.poll_timer = None
         self.read_timer = None
         self.data = {}
-        self.device_id = self.config['device'].getint('device_id')
+        self.device_id = device_model.device_id
         self.sections = []
         self.section_index = 0
-        logging.info(f"Init {self.__class__.__name__}: {self.config['device']['alias']} => {self.config['device']['mac_addr']}")
+        self.device_model = device_model
+        logging.info(f"Init {self.__class__.__name__}: {self.device_model.alias} => {self.device_model.mac_addr}")
 
     def connect(self):
-        self.manager = DeviceManager(adapter_name=self.config['device']['adapter'], mac_address=self.config['device']['mac_addr'], alias=self.config['device']['alias'])
+        #self.manager = DeviceManager(adapter_name=self.config['device']['adapter'], mac_address=self.device_model.mac_addr, alias=self.device_model.alias)
+        self.manager = DeviceManager(adapter_name=self.device_model.adapter, mac_address=self.device_model.mac_addr, alias=self.device_model.alias)
         self.manager.discover()
 
         if not self.manager.device_found:
-            logging.error(f"Device not found: {self.config['device']['alias']} => {self.config['device']['mac_addr']}, please check the details provided.")
+            logging.error(f"Device not found: {self.device_model.alias} => {self.device_model.mac_addr}, please check the details provided.")
             for dev in self.manager.devices():
                 if dev.alias() != None and dev.alias().startswith(ALIAS_PREFIX):
                     logging.debug(f"Possible device found! ======> {dev.alias()} > [{dev.mac_address}]")
             self.__stop_service()
 
-        self.device = Device(mac_address=self.config['device']['mac_addr'], manager=self.manager, on_resolved=self.__on_resolved, on_data=self.on_data_received, on_connect_fail=self.__on_connect_fail, notify_uuid=NOTIFY_CHAR_UUID, write_uuid=WRITE_CHAR_UUID)
+        self.device = Device(mac_address=self.device_model.mac_addr, manager=self.manager, on_resolved=self.__on_resolved, on_data=self.on_data_received, on_connect_fail=self.__on_connect_fail, notify_uuid=NOTIFY_CHAR_UUID, write_uuid=WRITE_CHAR_UUID)
 
         try:
             self.device.connect()
@@ -82,7 +85,7 @@ class BaseClient:
 
     def on_read_operation_complete(self):
         logging.info("on_read_operation_complete")
-        self.data['__device'] = self.config['device']['alias']
+        self.data['__device'] = self.device_model.alias
         self.data['__client'] = self.__class__.__name__
         self.__safe_callback(self.on_data_callback, self.data)
 
