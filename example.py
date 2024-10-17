@@ -2,6 +2,9 @@ import logging
 import configparser
 import os
 import sys
+import threading
+import queue
+from time import sleep
 from renogybt import InverterClient, RoverClient, RoverHistoryClient, BatteryClient, DataLogger, Utils
 from renogybt.Models import DeviceModel
 
@@ -47,13 +50,29 @@ def on_data_received(client, data):
 def on_error(client, error):
     logging.error(f"on_error: {error}")
 
-# Start Battery Client
-#battery_client = BatteryClient(config, battery_device, on_data_received, on_error)
-#battery_client.connect()
+def battery_thread(config, battery_device, on_data_received, on_error):
+    battery_client = BatteryClient(config, battery_device, on_data_received, on_error)
+    battery_client.connect()
+
+def controller_thread(config, charge_controller_device, on_data_received, on_error):
+    rover_client = RoverClient(config, charge_controller_device, on_data_received, on_error)
+    rover_client.connect()
+
+# Start Battery thread
+battery_thread = threading.Thread(target=battery_thread, args=(config, battery_device, on_data_received, on_error))
+battery_thread.start()
+
+sleep(10)
+
+# Start Charge Controller thread
+controller_thread = threading.Thread(target=controller_thread, args=(config, charge_controller_device, on_data_received, on_error))
+controller_thread.start()
+
+
 
 # Start Charge Controller Client
-rover_client = RoverClient(config, charge_controller_device, on_data_received, on_error)
-rover_client.connect()
+#rover_client = RoverClient(config, charge_controller_device, on_data_received, on_error)
+#rover_client.connect()
 
 '''
 # start client
